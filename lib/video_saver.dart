@@ -1,27 +1,30 @@
 import 'package:dio/dio.dart';
+import 'package:flick_video_player/flick_video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_player/video_player.dart';
 
-class ImageSaver extends StatefulWidget {
-  const ImageSaver({super.key});
+class VideoSaver extends StatefulWidget {
+  const VideoSaver({super.key});
 
   @override
-  State<ImageSaver> createState() => _ImageSaverState();
+  State<VideoSaver> createState() => _VideoSaverState();
 }
 
-class _ImageSaverState extends State<ImageSaver> {
+class _VideoSaverState extends State<VideoSaver> {
   TextEditingController inputController = TextEditingController();
-  bool showGambar = false;
-  String linkGambar = '';
+  late VideoPlayerController _videoPlayerController;
+  late FlickManager _flickManager;
+  bool showVideo = false;
 
-  ambilGambar(String imageURL) async {
-    if (imageURL.isEmpty) {
+  ambilVideo(String videoURL) async {
+    if (videoURL.isEmpty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Tidak Ada URL'),
-          content: const Text('Silakan Isi URL Gambar yang Benar'),
+          content: const Text('Silakan Isi URL Video yang Benar'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -34,18 +37,21 @@ class _ImageSaverState extends State<ImageSaver> {
     }
 
     setState(() {
-      showGambar = true;
-      linkGambar = imageURL;
+      showVideo = true;
     });
+
+    _videoPlayerController =
+        VideoPlayerController.networkUrl(Uri.parse(videoURL))..initialize();
+    _flickManager = FlickManager(videoPlayerController: _videoPlayerController);
   }
 
-  Future<void> simpanGambar(String imageURL) async {
-    if (imageURL.isEmpty) {
+  Future<void> simpanVideo(String videoURL) async {
+    if (videoURL.isEmpty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Tidak Ada URL'),
-          content: const Text('Silakan Isi URL Gambar yang Benar'),
+          content: const Text('Silakan Isi URL Video yang Benar'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -58,17 +64,17 @@ class _ImageSaverState extends State<ImageSaver> {
     }
 
     final apkDir = await getApplicationDocumentsDirectory();
-    String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    String fileName = '${DateTime.now().millisecondsSinceEpoch}.mp4';
     final filePath = '${apkDir.path}/$fileName';
 
     Dio dio = Dio();
 
-    await dio.download(imageURL, filePath);
+    await dio.download(videoURL, filePath);
 
-    await GallerySaver.saveImage(filePath, albumName: 'Flutter Download');
+    await GallerySaver.saveVideo(filePath, albumName: 'Flutter Download');
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Gambar Telah Tersimpan di Galeri')),
+      const SnackBar(content: Text('Video Telah Tersimpan di Galeri')),
     );
   }
 
@@ -84,14 +90,14 @@ class _ImageSaverState extends State<ImageSaver> {
               TextFormField(
                 controller: inputController,
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.image_search_outlined),
+                  prefixIcon: const Icon(Icons.slow_motion_video),
                   labelText: 'Link',
                   hintText: 'Input Link',
                   suffixIcon: IconButton(
                     onPressed: () {
                       setState(() {
                         inputController.text = "";
-                        showGambar = false;
+                        showVideo = false;
                       });
                     },
                     icon: const Icon(Icons.cancel_presentation_outlined),
@@ -106,9 +112,9 @@ class _ImageSaverState extends State<ImageSaver> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      ambilGambar(inputController.text);
+                      ambilVideo(inputController.text);
                     },
-                    icon: const Icon(Icons.image),
+                    icon: const Icon(Icons.ondemand_video),
                     label: const Text('Lihat'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigoAccent,
@@ -116,10 +122,10 @@ class _ImageSaverState extends State<ImageSaver> {
                       padding: const EdgeInsets.symmetric(horizontal: 30),
                     ),
                   ),
-                  if (showGambar)
+                  if (showVideo)
                     ElevatedButton.icon(
                       onPressed: () {
-                        simpanGambar(inputController.text);
+                        simpanVideo(inputController.text);
                       },
                       icon: const Icon(Icons.save),
                       label: const Text('Simpan'),
@@ -134,7 +140,7 @@ class _ImageSaverState extends State<ImageSaver> {
               const SizedBox(
                 height: 25.0,
               ),
-              if (showGambar)
+              if (showVideo)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
@@ -145,20 +151,25 @@ class _ImageSaverState extends State<ImageSaver> {
                           color: Colors.black.withOpacity(0.3),
                           spreadRadius: 2,
                           blurRadius: 5,
-                          offset: const Offset(5, 5),
+                          offset:
+                              const Offset(5, 5),
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(21),
-                      child: Image.network(linkGambar),
-                    ),
+                        borderRadius: BorderRadius.circular(21),
+                        child: AspectRatio(
+                          aspectRatio: _videoPlayerController.value.aspectRatio,
+                          child: FlickVideoPlayer(
+                            flickManager: _flickManager,
+                          ),
+                        )),
                   ),
                 )
               else
                 const Padding(
                   padding: EdgeInsets.all(20),
-                  child: Text('Silakan Masukkan URL Gambar untuk Dilihat'),
+                  child: Text('Silakan Masukkan URL Video untuk Dilihat'),
                 ),
               const SizedBox(
                 height: 45.0,

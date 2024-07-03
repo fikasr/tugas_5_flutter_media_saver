@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tugas_5_flutter_media_saver/image_saver.dart';
+import 'package:tugas_5_flutter_media_saver/video_saver.dart';
 
 void main() {
   runApp(const MyApp());
@@ -43,7 +44,7 @@ class MyApp extends StatelessWidget {
             child: TabBarView(
               children: [
                 ImageSaver(),
-                Placeholder(),
+                VideoSaver(),
               ],
             ),
           ),
